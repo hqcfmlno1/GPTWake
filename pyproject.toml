@@ -53,3 +53,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# The final cell intentionally repeats imports/helpers to run in a fresh kernel.
+"notebooks/02_positive_recording_augmentation.ipynb" = ["F811"]

@@ -43,10 +43,29 @@ uv run --all-extras jupyter lab notebooks
 ```
 
 For a local positive-recording pilot, open
-`02_positive_recording_augmentation.ipynb`. Its buttons capture four-second
-recordings, automatically save mono PCM16 WAV files, and generate randomly
-positioned two-second windows with gain, noise, and speed variations.
+`02_positive_recording_augmentation.ipynb`. Its buttons capture positive, negative,
+hard-negative, and background recordings into
+`data/<positive|negative|hard_negative|noise>/raw/`, preserving the capture sample rate in
+float WAV files. Processed audio is mono 16 kHz PCM16 WAV; augmented examples
+are stored separately. Positive variants use random placement, gain, noise,
+and speed changes. Each category has **Start** and **Stop** buttons;
+audio streams to disk without a countdown or preset duration. Positive recordings
+use their full duration by default, with optional manual trimming and no automatic
+wake-word detection. Mixing randomly selects a raw
+noise file and a segment within it, without creating processed noise copies.
+For ordinary and hard negatives, Stop saves raw only. The extraction panel takes
+explicit time ranges and creates random or sliding windows without loading the full
+recording. Hard-negative clips are preserved and placed randomly in the output
+window, with a configurable number of copies and silence filling the rest. Both categories
+retain label 0, source timestamps, and a source split locked at first extraction.
+**Save samples** uses the slider selection directly; optional multiple intervals and
+split assignment are under Advanced. **Augment processed audio** lets you select existing
+processed files or explicitly augment all processed files in Category. Save selects
+only the newly saved files automatically. See `data/README.md` for the workflow.
+Noise is shared across notebook restarts, and folders are created only when data is saved.
 The notebook uses `audiomentations` and `ipywidgets` from the development group.
+Teammates can run only the final **Standalone control panel** cell in a fresh
+project kernel; the original three cells remain available for step-by-step use.
 Running all cells initializes the controls without starting microphone capture.
 
 Start with `00_environment.ipynb` for local GPU/audio checks, then
@@ -63,11 +82,12 @@ committing recordings or transcripts.
 ```text
 configs/                 Experiment configurations (not finalized yet)
 data/
-  raw/                   Original recordings
+  positive/              Positive raw/processed/augmented audio
+  negative/              Ordinary negative raw/processed/augmented audio
+  hard_negative/         Hard-negative raw/processed/augmented audio
+  noise/raw/             Background sources for mixing
   synthetic/             Generated speech
-  negatives/             Negative speech, hard negatives, and noise
   manifests/             Metadata, annotations, and split assignments
-  processed/             Regenerable processed audio/features
 src/gptwake/
   data/                  Decoding, preprocessing, windowing, augmentation
   models/                BC-ResNet, DMA-KWS adapters, XLS-R adapters
