@@ -75,7 +75,7 @@ class PositiveWorkflowTests(unittest.TestCase):
         self.assertEqual(
             sum(
                 "<audio" in e.get("data", {}).get("text/html", "")
-                for e in self.ns["output"].outputs
+                for e in self.ns["negative_preview_output"].outputs
             ),
             1,
         )
@@ -243,41 +243,14 @@ class PositiveWorkflowTests(unittest.TestCase):
         )
         self.assertEqual({m["source_type"] for m in self.manifests()}, {"human", "synthetic"})
 
-    def test_synthetic_negative_without_json_and_human_negative_use_separate_scopes(self):
-        raw = self.ns["save_recording"]("negative", np.full(32000, 0.1, "float32"), 16000)
-        human = self.ns["extract_negative_windows"]("negative", raw, [(0, 2)], mode="sliding")[0]
+    def test_ordinary_negative_augmentation_is_unavailable_without_changing_existing_files(self):
         synth = self.processed("tts_negative.wav", seconds=2, stage="synthetic", kind="negative")
+        before = synth.read_bytes()
         self.ns["refresh_processed_samples"]()
-        self.ns["negative_aug_scope"].value = "human"
-        self.ns["negative_aug_button"].click()
-        folder = self.root / "data/negative/augmented"
-        manifests = [json.loads(p.read_text()) for p in folder.glob("*/metadata.json")]
-        self.assertEqual(len(manifests), 1)
-        self.assertEqual(manifests[0]["processed_source"], str(human.relative_to(self.root)))
-        self.ns["negative_aug_scope"].value = "synthetic"
-        self.ns["negative_aug_button"].click()
-        manifests = [json.loads(p.read_text()) for p in folder.glob("*/metadata.json")]
-        synthetic = [m for m in manifests if m["source_type"] == "synthetic"]
-        self.assertEqual(len(synthetic), 1)
-        self.assertEqual(synthetic[0]["label"], 0)
-        self.assertEqual(synthetic[0]["processed_source"], str(synth.relative_to(self.root)))
-        self.assertEqual(len(synthetic[0]["variants"]), 3)
-        self.assertFalse(synth.with_suffix(".json").exists())
-
-    def test_bad_human_metadata_does_not_block_synthetic_negative_refresh_or_augmentation(self):
-        human = self.processed("bad.wav", seconds=2, kind="negative")
-        human.with_suffix(".json").write_text("{")
-        synth = self.processed("good.wav", seconds=2, stage="synthetic", kind="negative")
-        self.ns["negative_processed_refresh"].click()
-        options = {value for _, value in self.ns["negative_processed"].options}
-        self.assertIn(str(synth), options)
-        logs = "".join(e.get("text", "") for e in self.ns["output"].outputs)
-        self.assertIn("bad.wav", logs)
-        self.ns["negative_aug_scope"].value = "synthetic"
-        self.ns["negative_aug_button"].click()
-        manifests = list((self.root / "data/negative/augmented").glob("*/metadata.json"))
-        self.assertEqual(len(manifests), 1)
-        self.assertEqual(json.loads(manifests[0].read_text())["source_type"], "synthetic")
+        self.assertEqual(self.ns["negative_augmentation_box"].layout.display, "none")
+        self.assertTrue(self.ns["negative_aug_button"].disabled)
+        self.assertEqual(synth.read_bytes(), before)
+        self.assertFalse((self.root / "data/negative/augmented").exists())
 
     def test_supplied_speaker_split_and_lineage_are_preserved(self):
         source = self.processed("human_01.wav")

@@ -65,28 +65,25 @@ class NegativeWindowTests(unittest.TestCase):
             a, b = self.metadata(path)["selection_seconds"]
             self.assertTrue(8 <= a < b <= 11)
 
-    def test_hard_source_defaults_to_random_placement_and_preserves_the_selected_clip(self):
+    def test_hard_source_saves_one_unpadded_crop_regardless_of_hidden_sample_count(self):
         first = self.source("hard_negative", seconds=4)
         second = self.source("hard_negative", seconds=1.672)
         self.open_panel()
         self.ns["negative_kind"].value = "hard_negative"
         self.ns["negative_source"].value = str(first)
-        self.ns["negative_mode"].value = "clips"
+        self.assertTrue(self.ns["extract_button"].disabled)
         self.ns["negative_source"].value = str(second)
-        self.assertEqual(self.ns["negative_mode"].value, "placement")
-        self.assertNotEqual(self.ns["negative_count"].layout.display, "none")
-        self.assertEqual(self.ns["negative_stride"].layout.display, "none")
-        self.assertNotIn("random", dict(self.ns["negative_mode"].options).values())
+        for name in ("negative_mode", "negative_count", "negative_stride"):
+            self.assertEqual(self.ns[name].layout.display, "none")
         self.ns["negative_window"].value = 2.5
-        self.ns["negative_count"].value = 3
+        self.ns["negative_count"].value = 99
         self.ns["negative_selection"].value = (0, 1.33)
         self.ns["extract_button"].click()
         files = list((self.root / "data/hard_negative/processed").rglob("*.wav"))
-        self.assertEqual(len(files), 3)
-        for path in files:
-            self.assertEqual(self.metadata(path)["selection_seconds"], [0, 1.33])
-            self.assertEqual(self.metadata(path)["windowing_mode"], "placement")
-            self.assertEqual(sf.info(path).frames, 40000)
+        self.assertEqual(len(files), 1)
+        self.assertEqual(self.metadata(files[0])["selection_seconds"], [0, 1.33])
+        self.assertEqual(self.metadata(files[0])["selection_method"], "manual")
+        self.assertEqual(sf.info(files[0]).frames, 21280)
 
     def test_hard_random_placement_creates_requested_copies_without_cropping_the_clip(self):
         source = self.source("hard_negative", seconds=1)
@@ -204,7 +201,7 @@ class NegativeWindowTests(unittest.TestCase):
         self.assertEqual(reads, [(110250, 352800)])
         players = [
             e
-            for e in self.ns["output"].outputs
+            for e in self.ns["negative_preview_output"].outputs
             if "<audio" in e.get("data", {}).get("text/html", "")
         ]
         self.assertEqual(len(players), 1)
@@ -279,7 +276,7 @@ class NegativeWindowTests(unittest.TestCase):
         augmented = json.loads((folder / "metadata.json").read_text())
         self.assertEqual(augmented["label"], 0)
         self.assertEqual(augmented["source"], "data/hard_negative/raw/hard_negative_0001.wav")
-        self.assertEqual(len(augmented["variants"]), 3)
+        self.assertEqual(len(augmented["variants"]), 6)
 
     def test_random_windows_stay_inside_ranges_and_resample_only_selected_frames(self):
         source = self.source(rate=44100, stereo=True)
@@ -385,60 +382,99 @@ class NegativeWindowTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "split"):
             self.extract("negative", source, [(0, 5)], count=2, split="train")
 
-    def test_extraction_panel_creates_windows_and_batch_augments_only_processed(self):
-        source = self.source(seconds=8)
-        with patch.object(self.ns["sd"], "query_devices", return_value=[]):
-            with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
-                exec(self.cells[0], self.ns)
-        self.assertTrue("negative_source" in self.ns, "Missing negative extraction controls")
-        self.ns["negative_source"].value = str(source)
-        self.ns["negative_multiple"].value = True
-        self.ns["negative_ranges"].value = "1, 4\n5, 8"
-        self.ns["negative_count"].value = 4
-        self.ns["extract_button"].click()
-        windows = list((self.root / "data/negative/processed").rglob("*.wav"))
-        self.assertEqual(len(windows), 4)
-        with patch.dict(
-            self.ns, {"process_recording": lambda *a, **k: self.fail("Batch read raw")}
-        ):
-            self.ns["negative_aug_button"].click()
-        runs = list((self.root / "data/negative/augmented").glob("*/metadata.json"))
-        self.assertEqual(len(runs), 4)
-
-    def test_augmentation_defaults_to_newly_saved_files_and_can_target_a_subset(self):
-        source = self.source(seconds=8)
-        old = self.extract("negative", source, [(0, 4)], count=2)
-        self.open_panel()
-        self.assertIn("negative_processed", self.ns, "Missing processed file selection")
-        self.ns["negative_source"].value = str(source)
-        self.ns["negative_selection"].value = (4, 8)
-        self.ns["negative_count"].value = 3
-        self.ns["extract_button"].click()
-        selected = self.ns["negative_processed"].value
-        self.assertEqual(len(selected), 3)
-        self.assertTrue(set(selected).isdisjoint(map(str, old)))
-        self.assertEqual(self.ns["negative_aug_scope"].value, "selected")
-        self.ns["negative_processed"].value = (selected[1],)
-        self.ns["negative_aug_button"].click()
-        runs = list((self.root / "data/negative/augmented").glob("*/metadata.json"))
-        self.assertEqual(len(runs), 1)
-        meta = json.loads(runs[0].read_text())
-        self.assertEqual(meta["processed_source"], str(Path(selected[1]).relative_to(self.root)))
-
-    def test_all_scope_is_explicit_and_includes_every_saved_sample(self):
-        first = self.source(seconds=8)
-        second = self.source(seconds=8)
-        self.extract("negative", first, [(0, 4)], count=2)
-        self.extract("negative", second, [(0, 4)], count=3)
-        self.open_panel()
-        self.assertIn("negative_aug_scope", self.ns, "Missing explicit augmentation scope")
-        self.assertEqual(self.ns["negative_aug_scope"].value, "selected")
+    def test_ordinary_negative_has_processing_only_and_hard_negative_has_augmentation(self):
+        self.assertEqual(self.ns["negative_augmentation_box"].layout.display, "none")
         self.assertTrue(self.ns["negative_aug_button"].disabled)
-        self.ns["negative_aug_scope"].value = "human"
-        self.assertFalse(self.ns["negative_aug_button"].disabled)
+        self.assertFalse(self.ns["negative_processing_scope"].disabled)
+        self.ns["negative_kind"].value = "hard_negative"
+        self.assertEqual(self.ns["negative_augmentation_box"].layout.display, "")
+        self.assertEqual(self.ns["negative_processing_scope"].layout.display, "none")
+        self.ns["negative_kind"].value = "negative"
+        self.assertEqual(self.ns["negative_augmentation_box"].layout.display, "none")
+        with self.assertRaisesRegex(ValueError, "Hard negative"):
+            self.ns["augment_chosen_negatives"]()
+
+    def test_process_all_raw_imported_wavs_uses_whole_files_and_skips_invalid(self):
+        folder = self.root / "data/negative/raw"
+        folder.mkdir(parents=True, exist_ok=True)
+        first = folder / "external.wav"
+        sf.write(first, np.full((44100 * 6, 2), 0.1), 44100)
+        sf.write(folder / "short.wav", np.ones(8000), 8000)
+        (folder / "broken.wav").write_bytes(b"invalid WAV")
+        second = self.source(seconds=8)
+        before = first.read_bytes()
+        self.ns["negative_raw_refresh"].click()
+        self.ns["negative_source"].value = str(second)
+        self.ns["negative_selection"].value = (1, 4)
+        self.ns["negative_processing_scope"].value = "all"
+        self.ns["negative_mode"].value = "sliding"
+        self.ns["negative_stride"].value = 2.5
+        self.assertFalse(self.ns["extract_button"].disabled)
+        self.assertTrue(self.ns["negative_selection"].disabled)
+        self.ns["extract_button"].click()
+        files = list((self.root / "data/negative/processed").rglob("*.wav"))
+        self.assertEqual(len(files), 5)
+        self.assertEqual(
+            {self.metadata(p)["source"] for p in files},
+            {str(first.relative_to(self.root)), str(second.relative_to(self.root))},
+        )
+        self.assertTrue(all(sf.info(p).frames == 40000 for p in files))
+        self.assertTrue(
+            all(sf.info(p).samplerate == 16000 and sf.info(p).channels == 1 for p in files)
+        )
+        self.assertEqual(first.read_bytes(), before)
+        self.assertFalse((self.root / "data/negative/augmented").exists())
+        logs = "".join(e.get("text", "") for e in self.ns["output"].outputs)
+        self.assertIn("short.wav", logs)
+        self.assertIn("broken.wav", logs)
+        self.assertIn("Processed 2 of 4", logs)
+
+    def test_process_all_random_count_is_per_file_and_needs_no_selected_source(self):
+        self.source(seconds=6)
+        self.source(seconds=7)
+        self.ns["negative_processing_scope"].value = "all"
+        self.ns["negative_count"].value = 3
+        self.assertIsNone(self.ns["negative_source"].value)
+        self.assertFalse(self.ns["extract_button"].disabled)
+        self.ns["extract_button"].click()
+        files = list((self.root / "data/negative/processed").rglob("*.wav"))
+        self.assertEqual(len(files), 6)
+        self.assertEqual(len({self.metadata(p)["source"] for p in files}), 2)
+
+    def test_batch_preserves_source_split_locks_and_skips_incomplete_recordings(self):
+        locked = self.source(seconds=6)
+        self.extract("negative", locked, [(0, 3)], mode="sliding", split="validation")
+        fresh = self.source(seconds=6)
+        active = self.source(seconds=6)
+        active.with_suffix(".json").write_text(json.dumps({"status": "recording"}))
+        self.ns["negative_processing_scope"].value = "all"
+        self.ns["negative_split"].value = "train"
+        self.ns["negative_count"].value = 1
+        saved = self.ns["process_all_negative_raw"]()
+        self.assertEqual(len(saved), 2)
+        splits = {self.metadata(p)["source"]: self.metadata(p)["split"] for p in saved}
+        self.assertEqual(splits[str(locked.relative_to(self.root))], "validation")
+        self.assertEqual(splits[str(fresh.relative_to(self.root))], "train")
+        self.assertFalse(
+            any(self.metadata(p)["source"] == str(active.relative_to(self.root)) for p in saved)
+        )
+
+    def test_hard_augmentation_can_target_subset_or_all_processed(self):
+        sources = [self.source("hard_negative", seconds=1) for _ in range(3)]
+        self.open_panel()
+        self.ns["negative_kind"].value = "hard_negative"
+        for source in sources:
+            self.ns["negative_source"].value = str(source)
+            self.ns["extract_button"].click()
+        files = [value for _, value in self.ns["negative_processed"].options]
+        self.assertEqual(len(files), 3)
+        self.ns["negative_processed"].value = (files[1],)
         self.ns["negative_aug_button"].click()
-        runs = list((self.root / "data/negative/augmented").glob("*/metadata.json"))
-        self.assertEqual(len(runs), 5)
+        folder = self.root / "data/hard_negative/augmented"
+        self.assertEqual(len(list(folder.glob("*/metadata.json"))), 1)
+        self.ns["negative_aug_scope"].value = "human"
+        self.ns["negative_aug_button"].click()
+        self.assertEqual(len(list(folder.glob("*/metadata.json"))), 4)
 
     def test_processed_selection_clears_when_category_changes(self):
         normal = self.source(seconds=8)

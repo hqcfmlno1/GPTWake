@@ -64,18 +64,26 @@ skipped so other valid files can continue. Positive processed phrases are not pa
 until augmentation; there is no automatic wake-word detection.
 Mixing randomly selects a raw
 noise file and a segment within it, without creating processed noise copies.
-For ordinary and hard negatives, Stop saves raw only. The extraction panel takes
-explicit time ranges and creates random or sliding windows without loading the full
-recording. Hard-negative clips are preserved and placed randomly in the output
-window, with a configurable number of copies and silence filling the rest. Both categories
-retain label 0, source timestamps, and a source split locked at first extraction.
-**Save samples** uses the slider selection directly; optional multiple intervals and
-split assignment are under Advanced. **Augment processed audio** lets you select existing
-human processed files or prepared synthetic negatives in `data/negative/synthetic/`.
-The same selected / all human / all synthetic scopes keep the two groups separate.
-Synthetic negative WAVs must already be nonempty mono 16 kHz samples; their saved
-length is preserved during augmentation. Save selects
-only the newly saved files automatically. See `data/README.md` for the workflow.
+For ordinary and hard negatives, Stop saves raw only. Ordinary negatives can also
+be imported by copying WAVs with any sample rate and channel count into
+`data/negative/raw/`, then clicking **Refresh raw WAVs**. Choose **Selected raw WAV**
+to preview and crop approved ranges, or **All raw WAVs (full duration per file)**
+to process every full WAV. Random sampling creates the requested number per file;
+sliding uses the chosen stride and drops incomplete tails. Outputs are fixed-window,
+mono 16 kHz PCM16 WAVs in `negative/processed/`, ready for training. Ordinary
+negatives have no augmentation UI. Batch processing reports invalid, incomplete,
+and short files and continues with valid files; existing source split locks remain.
+Hard negatives follow a phrase workflow like positives: **Start hard negative / Stop
+hard negative** saves raw only. Select **Hard negative**, preview and crop **Phrase
+(s)**, then click **Save hard-negative sample**. This saves an unpadded mono 16 kHz
+phrase in `hard_negative/processed/`, after checking that it fits Window. TTS teams
+can copy prepared mono 16 kHz WAV phrases directly into the same processed folder;
+no raw recording or JSON is required. Use distinct names to avoid overwriting
+another teammate's work. **Refresh file list**, select files or **Augment all
+processed**, then augment. Each valid phrase creates six fixed-window variants
+with random placement, gain, noise, and speed changes, retaining label 0. Invalid
+inputs are reported and skipped. Augmentation uses saved phrases and the current
+Window, never unsaved crop edits. See `data/README.md` for details.
 Noise is shared across notebook restarts, and folders are created only when data is saved.
 The notebook uses `audiomentations` and `ipywidgets` from the development group.
 The notebook contains a single standalone code cell with all setup, helpers, and
@@ -96,12 +104,10 @@ committing recordings or transcripts.
 ```text
 configs/                 Experiment configurations (not finalized yet)
 data/
-  positive/              Positive raw/processed/augmented audio
-  negative/              Ordinary negative raw/processed/augmented audio
+  positive/              Positive raw/processed/synthetic/augmented audio
+  negative/              Ordinary negative raw/processed audio
   hard_negative/         Hard-negative raw/processed/augmented audio
   noise/raw/             Background sources for mixing
-  synthetic/             Generated speech
-  manifests/             Metadata, annotations, and split assignments
 src/gptwake/
   data/                  Decoding, preprocessing, windowing, augmentation
   models/                BC-ResNet, DMA-KWS adapters, XLS-R adapters
