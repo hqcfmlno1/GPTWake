@@ -13,9 +13,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
-NOTEBOOK = (
-    Path(__file__).resolve().parents[1] / "notebooks/02_positive_recording_augmentation.ipynb"
-)
+NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks/02_dataset_recording_augmentation.ipynb"
 
 
 class PositiveWorkflowTests(unittest.TestCase):
@@ -47,6 +45,40 @@ class PositiveWorkflowTests(unittest.TestCase):
             json.loads(p.read_text())
             for p in sorted((self.root / "data/positive/augmented").glob("*/metadata.json"))
         ]
+
+    def test_positive_preview_stays_near_positive_controls_and_survives_negative_actions(self):
+        source = self.ns["save_recording"]("positive", np.full(16000, 0.1, "float32"), 16000)
+        self.ns["load_positive"](source)
+        preview = self.ns["positive_preview_output"]
+        children = self.ns["_pilot_panel"].children
+        self.assertLess(children.index(preview), children.index(self.ns["negative_kind"]))
+        self.ns["selection"].value = (0, 0.5)
+        for _ in range(2):
+            self.ns["preview_button"].click()
+            entries = preview.outputs
+            self.assertEqual(
+                sum("<audio" in e.get("data", {}).get("text/html", "") for e in entries), 1
+            )
+            self.assertEqual(sum("image/svg+xml" in e.get("data", {}) for e in entries), 1)
+        logs = "".join(e.get("text", "") for e in entries)
+        self.assertIn("0.50s", logs)
+        self.assertFalse(
+            any(
+                "<audio" in e.get("data", {}).get("text/html", "")
+                for e in self.ns["output"].outputs
+            )
+        )
+        raw = self.ns["save_recording"]("negative", np.full(32000, 0.1, "float32"), 16000)
+        self.ns["refresh_negative_sources"](raw)
+        self.ns["negative_preview_button"].click()
+        self.assertEqual(preview.outputs, entries)
+        self.assertEqual(
+            sum(
+                "<audio" in e.get("data", {}).get("text/html", "")
+                for e in self.ns["output"].outputs
+            ),
+            1,
+        )
 
     def test_save_positive_stores_only_reviewed_phrase_and_selects_it(self):
         source = self.ns["save_recording"]("positive", np.full(48000, 0.1, "float32"), 16000)
@@ -81,7 +113,7 @@ class PositiveWorkflowTests(unittest.TestCase):
         self.assertEqual(source.read_bytes(), before)
         self.assertEqual(len(meta["variants"]), 6)
         self.assertTrue(
-            all(sf.info(p).frames == 32000 for p in source.parent.parent.glob("augmented/*/*.wav"))
+            all(sf.info(p).frames == 40000 for p in source.parent.parent.glob("augmented/*/*.wav"))
         )
 
     def test_selected_subset_and_all_scope_use_processed_only(self):

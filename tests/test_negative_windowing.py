@@ -13,9 +13,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
-NOTEBOOK = (
-    Path(__file__).resolve().parents[1] / "notebooks/02_positive_recording_augmentation.ipynb"
-)
+NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks/02_dataset_recording_augmentation.ipynb"
 
 
 class NegativeWindowTests(unittest.TestCase):
@@ -154,7 +152,7 @@ class NegativeWindowTests(unittest.TestCase):
         self.ns["negative_selection"].value = (0, 1.5)
         self.assertTrue(self.ns["extract_button"].disabled)
         self.assertIn("1.50", self.ns["negative_summary"].value)
-        self.assertIn("2.00", self.ns["negative_summary"].value)
+        self.assertIn("2.50", self.ns["negative_summary"].value)
         self.assertIn("longer", self.ns["negative_summary"].value)
         self.assertTrue("negative_window" in self.ns, "Missing local output window selector")
         self.ns["negative_window"].value = 1.5
