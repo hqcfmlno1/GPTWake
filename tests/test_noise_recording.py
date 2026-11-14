@@ -269,6 +269,8 @@ class NoiseRecordingTests(unittest.TestCase):
                 if kind == "positive":
                     namespace[stop_name].click()
                 else:
+                    if kind == "negative":
+                        namespace["negative_processing_scope"].value = "all"
                     with patch.dict(
                         namespace,
                         {"normalize_source": lambda _: self.fail("Stop decoded full negative")},
@@ -293,11 +295,13 @@ class NoiseRecordingTests(unittest.TestCase):
                     logs = "".join(e.get("text", "") for e in namespace["output"].outputs)
                     self.assertIn("Save samples", logs)
                     self.assertEqual(namespace["negative_source"].value, str(recorder.path))
+                    if kind == "negative":
+                        self.assertEqual(namespace["negative_processing_scope"].value, "selected")
                     if kind == "hard_negative":
                         namespace["extract_button"].click()
                         windows = list((self.root / "data/hard_negative/processed").rglob("*.wav"))
                         self.assertEqual(len(windows), 1)
-                        self.assertEqual(sf.info(windows[0]).frames, 40000)
+                        self.assertEqual(sf.info(windows[0]).frames, round(frames * 16000 / 48000))
 
 
 if __name__ == "__main__":
