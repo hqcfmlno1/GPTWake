@@ -14,9 +14,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
-NOTEBOOK = (
-    Path(__file__).resolve().parents[1] / "notebooks/02_positive_recording_augmentation.ipynb"
-)
+NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks/dataset_recording_augmentation.ipynb"
 
 
 class NotebookStorageTests(unittest.TestCase):

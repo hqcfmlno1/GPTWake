@@ -15,9 +15,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
-NOTEBOOK = (
-    Path(__file__).resolve().parents[1] / "notebooks/02_positive_recording_augmentation.ipynb"
-)
+NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks/dataset_recording_augmentation.ipynb"
 
 
 class FakeInputStream:
@@ -299,7 +297,7 @@ class NoiseRecordingTests(unittest.TestCase):
                         namespace["extract_button"].click()
                         windows = list((self.root / "data/hard_negative/processed").rglob("*.wav"))
                         self.assertEqual(len(windows), 1)
-                        self.assertEqual(sf.info(windows[0]).frames, 32000)
+                        self.assertEqual(sf.info(windows[0]).frames, 40000)
 
 
 if __name__ == "__main__":

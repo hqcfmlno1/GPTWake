@@ -29,7 +29,7 @@
 
 ## Task 1: Change the notebook storage contract
 
-**Files:** Modify `notebooks/02_positive_recording_augmentation.ipynb`; create `tests/test_notebook_data_layout.py`.
+**Files:** Modify `notebooks/dataset_recording_augmentation.ipynb`; create `tests/test_notebook_data_layout.py`.
 
 - [x] Add failing behavior tests for lazy setup, native-rate preservation, category-specific processing, unique names, augmentation lineage, and legacy imports.
 - [x] Run unittest discovery and confirm the old notebook fails the new storage contract.
