@@ -55,9 +55,9 @@ class KernelOutputTests(unittest.TestCase):
                 execute(source)
                 execute(
                     "p = save_recording('positive', np.sin(np.arange(16000)*0.1).astype('float32')*0.2, 16000)\n"
-                    "refresh_sources(p)\nload_positive(p)"
+                    "refresh_sources(p)\nload_positive(p)\nsave_positive_button.click()"
                 )
-                messages = execute("augment_button.click()")
+                messages = execute("positive_aug_button.click()")
                 self.assertFalse(
                     any(
                         m["msg_type"] in {"display_data", "stream", "clear_output"}

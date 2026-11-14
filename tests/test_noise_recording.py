@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 import nbformat
 import numpy as np
+import sounddevice as sd
 import soundfile as sf
 
 NOTEBOOK = (
@@ -56,9 +57,9 @@ class NoiseRecordingTests(unittest.TestCase):
         nb = nbformat.read(NOTEBOOK, as_version=4)
         self.cells = [c.source for c in nb.cells if c.cell_type == "code"]
         self.ns = {}
-        with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
-            exec(self.cells[0], self.ns)
-            exec(self.cells[1], self.ns)
+        with patch.object(sd, "query_devices", return_value=[]):
+            with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
+                exec(self.cells[0], self.ns)
 
     def recorder(self):
         self.assertTrue("AudioRecorder" in self.ns, "Missing continuous noise recorder")
@@ -161,7 +162,7 @@ class NoiseRecordingTests(unittest.TestCase):
         self.assertFalse((self.root / "data/noise/processed").exists())
 
     def test_standalone_cell_runs_in_fresh_namespace_and_keeps_stop_control(self):
-        self.assertGreaterEqual(len(self.cells), 4, "Missing standalone code cell")
+        self.assertEqual(len(self.cells), 1, "Expected only the standalone code cell")
         namespace = {}
         with patch.object(self.ns["sd"], "query_devices", return_value=[]):
             with patch.object(
@@ -191,7 +192,7 @@ class NoiseRecordingTests(unittest.TestCase):
         self.assertEqual(transform.parameters["offset"], 0)
 
     def test_stop_button_is_available_during_capture_and_restores_controls(self):
-        self.assertGreaterEqual(len(self.cells), 4)
+        self.assertEqual(len(self.cells), 1)
         namespace = {}
         with patch.object(self.ns["sd"], "query_devices", return_value=[]):
             with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
@@ -208,9 +209,17 @@ class NoiseRecordingTests(unittest.TestCase):
                     self.assertTrue(recorder.ready.wait(2))
         self.wait_for(lambda: recorder.frames == 4096)
         self.assertTrue(namespace["record_button"].disabled)
+        for name in (
+            "save_positive_button",
+            "positive_aug_button",
+            "positive_processed",
+            "positive_aug_scope",
+            "positive_processed_refresh",
+        ):
+            self.assertTrue(namespace[name].disabled)
         self.assertFalse(namespace["noise_stop_button"].disabled)
         with self.assertRaisesRegex(RuntimeError, "Stop"):
-            exec(self.cells[2], namespace)
+            exec(self.cells[0], namespace)
         self.assertIs(namespace["_recorder"], recorder)
         self.assertFalse(namespace["noise_stop_button"].disabled)
         with contextlib.redirect_stdout(io.StringIO()):
@@ -279,10 +288,8 @@ class NoiseRecordingTests(unittest.TestCase):
                 self.assertEqual(metadata["label"], 1 if kind == "positive" else 0)
                 if kind == "positive":
                     self.assertEqual(namespace["selection"].value, (0, 1))
-                    self.assertEqual(
-                        sf.info(self.root / "data/positive/processed" / recorder.path.name).frames,
-                        16000,
-                    )
+                    self.assertFalse((self.root / "data/positive/processed").exists())
+                    self.assertFalse((self.root / "data/positive/augmented").exists())
                 else:
                     self.assertFalse((self.root / "data" / kind / "processed").exists())
                     logs = "".join(e.get("text", "") for e in namespace["output"].outputs)

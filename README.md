@@ -49,9 +49,20 @@ hard-negative, and background recordings into
 float WAV files. Processed audio is mono 16 kHz PCM16 WAV; augmented examples
 are stored separately. Positive variants use random placement, gain, noise,
 and speed changes. Each category has **Start** and **Stop** buttons;
-audio streams to disk without a countdown or preset duration. Positive recordings
-use their full duration by default, with optional manual trimming and no automatic
-wake-word detection. Mixing randomly selects a raw
+audio streams to disk without a countdown or preset duration. Stop saves raw only.
+For human positives, preview the raw recording, set **Phrase (s)**, then click
+**Save positive sample**. This saves only the reviewed processed phrase after
+checking it fits Window. For synthetic positives, copy prepared WAV phrases directly
+into `data/positive/synthetic/`: mono 16 kHz, nonempty, and no longer than Window.
+Use distinct filenames across teammates and voices; JSON sidecars are optional.
+Click **Refresh positive files**, then choose individual prepared files,
+**Augment all human** (from `positive/processed/`), or **Augment all synthetic**
+(from `positive/synthetic/`). Each valid positive creates six variants. These scopes
+never read raw or use unsaved Phrase edits; augmentation is disabled when its
+selected group is empty. Invalid processed files are reported and
+skipped so other valid files can continue. Positive processed phrases are not padded
+until augmentation; there is no automatic wake-word detection.
+Mixing randomly selects a raw
 noise file and a segment within it, without creating processed noise copies.
 For ordinary and hard negatives, Stop saves raw only. The extraction panel takes
 explicit time ranges and creates random or sliding windows without loading the full
@@ -60,13 +71,16 @@ window, with a configurable number of copies and silence filling the rest. Both 
 retain label 0, source timestamps, and a source split locked at first extraction.
 **Save samples** uses the slider selection directly; optional multiple intervals and
 split assignment are under Advanced. **Augment processed audio** lets you select existing
-processed files or explicitly augment all processed files in Category. Save selects
+human processed files or prepared synthetic negatives in `data/negative/synthetic/`.
+The same selected / all human / all synthetic scopes keep the two groups separate.
+Synthetic negative WAVs must already be nonempty mono 16 kHz samples; their saved
+length is preserved during augmentation. Save selects
 only the newly saved files automatically. See `data/README.md` for the workflow.
 Noise is shared across notebook restarts, and folders are created only when data is saved.
 The notebook uses `audiomentations` and `ipywidgets` from the development group.
-Teammates can run only the final **Standalone control panel** cell in a fresh
-project kernel; the original three cells remain available for step-by-step use.
-Running all cells initializes the controls without starting microphone capture.
+The notebook contains a single standalone code cell with all setup, helpers, and
+controls. Run it in the project kernel to initialize the panel without starting
+microphone capture. See `data/README.md` for the recording and augmentation workflow.
 
 Start with `00_environment.ipynb` for local GPU/audio checks, then
 `01_realtime_api.ipynb` for text-to-voice and microphone-to-voice API experiments.

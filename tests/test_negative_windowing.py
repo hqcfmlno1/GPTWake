@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import nbformat
 import numpy as np
+import sounddevice as sd
 import soundfile as sf
 
 NOTEBOOK = (
@@ -27,9 +28,9 @@ class NegativeWindowTests(unittest.TestCase):
             c.source for c in nbformat.read(NOTEBOOK, as_version=4).cells if c.cell_type == "code"
         ]
         self.ns = {}
-        with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
-            exec(self.cells[0], self.ns)
-            exec(self.cells[1], self.ns)
+        with patch.object(sd, "query_devices", return_value=[]):
+            with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
+                exec(self.cells[0], self.ns)
 
     def extract(self, *args, **kwargs):
         self.assertTrue(
@@ -48,8 +49,8 @@ class NegativeWindowTests(unittest.TestCase):
 
     def open_panel(self):
         with patch.object(self.ns["sd"], "query_devices", return_value=[]):
-            with contextlib.redirect_stdout(io.StringIO()):
-                exec(self.cells[2], self.ns)
+            with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
+                exec(self.cells[0], self.ns)
         self.assertTrue("negative_selection" in self.ns, "Missing negative range slider")
 
     def test_simple_extraction_uses_slider_without_copying_to_ranges(self):
@@ -389,8 +390,8 @@ class NegativeWindowTests(unittest.TestCase):
     def test_extraction_panel_creates_windows_and_batch_augments_only_processed(self):
         source = self.source(seconds=8)
         with patch.object(self.ns["sd"], "query_devices", return_value=[]):
-            with contextlib.redirect_stdout(io.StringIO()):
-                exec(self.cells[2], self.ns)
+            with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
+                exec(self.cells[0], self.ns)
         self.assertTrue("negative_source" in self.ns, "Missing negative extraction controls")
         self.ns["negative_source"].value = str(source)
         self.ns["negative_multiple"].value = True
@@ -435,7 +436,7 @@ class NegativeWindowTests(unittest.TestCase):
         self.assertIn("negative_aug_scope", self.ns, "Missing explicit augmentation scope")
         self.assertEqual(self.ns["negative_aug_scope"].value, "selected")
         self.assertTrue(self.ns["negative_aug_button"].disabled)
-        self.ns["negative_aug_scope"].value = "all"
+        self.ns["negative_aug_scope"].value = "human"
         self.assertFalse(self.ns["negative_aug_button"].disabled)
         self.ns["negative_aug_button"].click()
         runs = list((self.root / "data/negative/augmented").glob("*/metadata.json"))
@@ -449,7 +450,7 @@ class NegativeWindowTests(unittest.TestCase):
         self.open_panel()
         self.assertIn("negative_processed", self.ns)
         self.ns["negative_processed"].value = tuple(map(str, old))
-        self.ns["negative_aug_scope"].value = "all"
+        self.ns["negative_aug_scope"].value = "human"
         self.ns["negative_kind"].value = "hard_negative"
         self.assertEqual(self.ns["negative_aug_scope"].value, "selected")
         self.assertEqual(self.ns["negative_processed"].value, ())

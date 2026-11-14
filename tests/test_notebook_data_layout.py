@@ -1,5 +1,6 @@
 """Behavior checks for the notebook's dataset storage and audio lineage."""
 
+import base64
 import contextlib
 import io
 import json
@@ -10,6 +11,7 @@ from unittest.mock import patch
 
 import nbformat
 import numpy as np
+import sounddevice as sd
 import soundfile as sf
 
 NOTEBOOK = (
@@ -25,11 +27,11 @@ class NotebookStorageTests(unittest.TestCase):
         (self.root / "pyproject.toml").write_text('[project]\nname="audio-fixture"\n')
         nb = nbformat.read(NOTEBOOK, as_version=4)
         cells = [cell.source for cell in nb.cells if cell.cell_type == "code"]
-        self.panel = cells[2]
+        self.panel = cells[0]
         self.ns = {}
-        with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
-            exec(compile(cells[0], "<setup>", "exec"), self.ns)
-            exec(compile(cells[1], "<helpers>", "exec"), self.ns)
+        with patch.object(sd, "query_devices", return_value=[]):
+            with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
+                exec(compile(self.panel, "<standalone>", "exec"), self.ns)
 
     def function(self, name):
         self.assertTrue(callable(self.ns.get(name)), f"Missing notebook behavior: {name}")
@@ -46,19 +48,110 @@ class NotebookStorageTests(unittest.TestCase):
 
     def open_panel(self):
         with patch.object(self.ns["sd"], "query_devices", return_value=[]):
-            with contextlib.redirect_stdout(io.StringIO()):
+            with contextlib.chdir(self.root), contextlib.redirect_stdout(io.StringIO()):
                 exec(self.panel, self.ns)
+
+    def test_positive_window_rejects_oversized_phrase_before_writing_processed(self):
+        source = self.function("save_recording")("positive", self.fixture(), 48000)
+        original = source.read_bytes()
+        with self.assertRaisesRegex(ValueError, "window"):
+            self.function("process_recording")(
+                "positive", source, bounds=(0, 2.1), window_seconds=2
+            )
+        self.assertFalse((self.root / "data/positive/processed").exists())
+        self.assertEqual(source.read_bytes(), original)
+        path = self.function("process_recording")(
+            "positive", source, bounds=(0, 2), window_seconds=2
+        )[0]
+        self.assertEqual(sf.info(path).frames, 32000)
+
+    def test_rejected_positive_selection_preserves_previous_processed_and_bounds(self):
+        source = self.function("save_recording")("positive", self.fixture(), 48000)
+        process = self.function("process_recording")
+        path = process("positive", source, bounds=(1, 2), window_seconds=2)[0]
+        previous = (path.read_bytes(), path.with_suffix(".json").read_bytes())
+        with self.assertRaisesRegex(ValueError, "window"):
+            process("positive", source, bounds=(0, 3), window_seconds=2)
+        self.assertEqual((path.read_bytes(), path.with_suffix(".json").read_bytes()), previous)
+
+    def test_oversized_positive_opens_for_trimming_without_saving_processed(self):
+        source = self.function("save_recording")(
+            "positive", np.full(32000, 0.1, dtype=np.float32), 16000
+        )
+        self.ns["window"].value = 1.5
+        self.ns["refresh_sources"](source)
+        self.ns["load_positive"](source)
+        self.assertEqual(self.ns["selection"].value, (0, 2))
+        self.assertEqual(self.ns["state"]["source"], source)
+        self.assertFalse((self.root / "data/positive/processed").exists())
+        self.ns["save_positive_button"].click()
+        self.assertFalse((self.root / "data/positive/processed").exists())
+        self.assertFalse((self.root / "data/positive/augmented").exists())
+        self.ns["selection"].value = (0, 1)
+        self.ns["save_positive_button"].click()
+        self.assertEqual(sf.info(self.root / "data/positive/processed" / source.name).frames, 16000)
+        self.assertFalse((self.root / "data/positive/augmented").exists())
+        self.ns["positive_aug_button"].click()
+        variants = list((self.root / "data/positive/augmented").rglob("*.wav"))
+        self.assertEqual(len(variants), 6)
+        self.assertTrue(all(sf.info(path).frames == 24000 for path in variants))
+
+    def test_positive_load_and_generate_use_window_larger_than_default(self):
+        source = self.function("save_recording")(
+            "positive", np.full(40000, 0.1, dtype=np.float32), 16000
+        )
+        self.ns["window"].value = 3
+        self.ns["load_positive"](source)
+        self.assertFalse((self.root / "data/positive/processed").exists())
+        self.ns["save_positive_button"].click()
+        self.assertEqual(sf.info(self.root / "data/positive/processed" / source.name).frames, 40000)
+        self.assertFalse((self.root / "data/positive/augmented").exists())
+        self.ns["positive_aug_button"].click()
+        variants = list((self.root / "data/positive/augmented").rglob("*.wav"))
+        self.assertEqual(len(variants), 6)
+        self.assertTrue(all(sf.info(path).frames == 48000 for path in variants))
+
+    def test_opening_positive_preserves_existing_processed_and_saved_bounds(self):
+        source = self.function("save_recording")("positive", self.fixture(), 48000)
+        path = self.function("process_recording")(
+            "positive", source, bounds=(1, 2), window_seconds=2
+        )[0]
+        previous = (path.read_bytes(), path.with_suffix(".json").read_bytes())
+        with patch.dict(
+            self.ns, {"process_recording": lambda *a, **k: self.fail("Load wrote processed")}
+        ):
+            self.ns["load_positive"](source)
+        self.assertEqual(self.ns["selection"].value, (1, 2))
+        self.assertEqual((path.read_bytes(), path.with_suffix(".json").read_bytes()), previous)
+
+    def test_positive_batch_skips_oversized_processed_and_continues(self):
+        oversized = self.function("save_recording")(
+            "positive", np.full(32000, 0.1, dtype=np.float32), 16000
+        )
+        valid = self.function("save_recording")(
+            "positive", np.full(16000, 0.1, dtype=np.float32), 16000
+        )
+        for source in (oversized, valid):
+            self.function("process_recording")("positive", source, window_seconds=2)
+        self.ns["window"].value = 1.5
+        self.ns["refresh_positive_processed"]()
+        self.ns["positive_aug_scope"].value = "human"
+        self.ns["positive_aug_button"].click()
+        processed = self.root / "data/positive/processed"
+        self.assertEqual(sf.info(processed / oversized.name).frames, 32000)
+        self.assertTrue((processed / valid.name).exists())
+        self.assertEqual(len(list((self.root / "data/positive/augmented").glob("*"))), 1)
 
     def test_positive_defaults_to_full_recording_even_with_legacy_heuristic_bounds(self):
         source = self.function("save_recording")("positive", self.fixture(), 48000)
         process = self.function("process_recording")
-        path = process("positive", source)[0]
+        path = process("positive", source, window_seconds=4)[0]
         self.assertEqual(sf.info(path).frames, 64000)
         old = json.loads(path.with_suffix(".json").read_text())
         old.pop("selection_method", None)
         old["selection_seconds"] = [0.76, 2.86]
         path.with_suffix(".json").write_text(json.dumps(old))
-        path = process("positive", source)[0]
+        path = process("positive", source, window_seconds=4)[0]
         self.assertEqual(sf.info(path).frames, 64000)
         self.assertEqual(
             json.loads(path.with_suffix(".json").read_text())["selection_seconds"], [0, 4]
@@ -86,7 +179,7 @@ class NotebookStorageTests(unittest.TestCase):
 
     def test_rerun_disposes_old_output_and_controls(self):
         self.open_panel()
-        old_output, old_button = self.ns["output"], self.ns["augment_button"]
+        old_output, old_button = self.ns["output"], self.ns["save_positive_button"]
         self.open_panel()
         self.assertIsNone(old_output.comm)
         self.assertIsNone(old_button.comm)
@@ -113,11 +206,15 @@ class NotebookStorageTests(unittest.TestCase):
             with self.subTest(samples=samples):
                 audio = np.array(samples, dtype=np.float32)
                 original = audio.copy()
-                displayed = []
-                with patch.dict(self.ns, {"display": displayed.append}):
-                    with contextlib.redirect_stdout(io.StringIO()):
-                        self.function("show_audio")(audio, "Preview test")
-                decoded, rate = sf.read(io.BytesIO(displayed[0].data), dtype="float32")
+                self.ns["output"].outputs = ()
+                self.function("show_audio")(audio, "Preview test")
+                html = next(
+                    entry["data"]["text/html"]
+                    for entry in self.ns["output"].outputs
+                    if "<audio" in entry.get("data", {}).get("text/html", "")
+                )
+                encoded = html.split("base64,", 1)[1].split('"', 1)[0]
+                decoded, rate = sf.read(io.BytesIO(base64.b64decode(encoded)), dtype="float32")
                 self.assertEqual(rate, 16000)
                 np.testing.assert_allclose(decoded, expected, atol=2 / 32768)
                 np.testing.assert_array_equal(audio, original)
