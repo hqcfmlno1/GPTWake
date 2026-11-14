@@ -43,7 +43,7 @@ uv run --all-extras jupyter lab notebooks
 ```
 
 For local dataset recording and augmentation, open
-`02_dataset_recording_augmentation.ipynb`. Its buttons capture positive, negative,
+`dataset_recording_augmentation.ipynb`. Its buttons capture positive, negative,
 hard-negative, and background recordings into
 `data/<positive|negative|hard_negative|noise>/raw/`, preserving the capture sample rate in
 float WAV files. Processed audio is mono 16 kHz PCM16 WAV; augmented examples

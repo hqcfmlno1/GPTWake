@@ -10,7 +10,7 @@ from pathlib import Path
 import nbformat
 from jupyter_client import KernelManager
 
-NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks/02_dataset_recording_augmentation.ipynb"
+NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks/dataset_recording_augmentation.ipynb"
 
 
 class KernelOutputTests(unittest.TestCase):
