@@ -1,0 +1,23 @@
+{
+  "source": "data\\positive\\raw\\trieuho2312_positive_0118.wav",
+  "recording_id": "trieuho2312_positive_0118",
+  "category": "positive",
+  "label": 1,
+  "sample_rate": 16000,
+  "speaker_id": "trieuho2312",
+  "split": "unassigned",
+  "selection_method": "manual",
+  "selection_seconds": [
+    0.35,
+    1.95
+  ],
+  "selection_seconds_before_trim": [
+    0.0,
+    1.9505
+  ],
+  "auto_trim": {
+    "method": "energy 10ms, peak-35dB, from raw",
+    "pad_seconds": 0.1,
+    "date": "2026-11-17"
+  }
+}
