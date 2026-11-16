@@ -1,0 +1,19 @@
+{
+  "source": "data\\hard_negative\\raw\\trieuho2312_hard_negative_0006.wav",
+  "source_group": "data\\hard_negative\\raw\\trieuho2312_hard_negative_0006.wav",
+  "category": "hard_negative",
+  "label": 0,
+  "split": "unassigned",
+  "mode": "placement",
+  "window_seconds": 2.5,
+  "approved_intervals_seconds": [
+    [
+      0.0,
+      1.5789569160997732
+    ]
+  ],
+  "seed": 1381631511,
+  "copies_per_clip": 1,
+  "stride_seconds": null,
+  "window_count": 1
+}

@@ -1,0 +1,24 @@
+{
+  "source": "data\\hard_negative\\raw\\trieuho2312_hard_negative_0061.wav",
+  "recording_id": "trieuho2312_hard_negative_0061",
+  "category": "hard_negative",
+  "label": 0,
+  "sample_rate": 16000,
+  "speaker_id": "trieuho2312",
+  "split": "unassigned",
+  "source_group": "data\\hard_negative\\raw\\trieuho2312_hard_negative_0061.wav",
+  "selection_seconds": [
+    0.0,
+    1.6718367346938776
+  ],
+  "source_start_frame": 0,
+  "source_end_frame": 73728,
+  "source_sample_rate": 44100,
+  "window_seconds": 2.5,
+  "windowing_mode": "placement",
+  "sampling_seed": 643273144,
+  "placement_offset_samples": 1881,
+  "placement_offset_seconds": 0.1175625,
+  "padding_left_samples": 1881,
+  "padding_right_samples": 11370
+}
