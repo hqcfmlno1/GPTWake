@@ -18,8 +18,8 @@ data/**
 !data/**/
 !data/**/.gitkeep
 !data/**/README.md
-!data/positive/raw/*.wav
-!data/hard_negative/raw/*.wav
+!data/positive/processed/*.wav
+!data/hard_negative/processed/*.wav
 checkpoints/**
 !checkpoints/.gitkeep
 outputs/**

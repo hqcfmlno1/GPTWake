@@ -1,6 +1,6 @@
 # Local Datasets
 
-Generated and derived dataset files are ignored by Git; only raw positive and raw hard-negative recordings are tracked. Organize data by its role first, then by processing stage:
+Audio dataset files are ignored by Git except the processed WAVs under `positive/processed/` and `hard_negative/processed/`, which are tracked; raw recordings and JSON sidecars stay local. Organize data by its role first, then by processing stage:
 
 ```text
 data/
