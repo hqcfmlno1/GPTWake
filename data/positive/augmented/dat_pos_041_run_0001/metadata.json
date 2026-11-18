@@ -1,0 +1,62 @@
+{
+  "source": "data\\positive\\raw\\dat_pos_041.wav",
+  "recording_id": "dat_pos_041",
+  "category": "positive",
+  "label": 1,
+  "sample_rate": 16000,
+  "speaker_id": "dat",
+  "split": "unassigned",
+  "selection_method": "manual",
+  "selection_seconds": [
+    0.0,
+    2.45
+  ],
+  "source_type": "human",
+  "processed_source": "data\\positive\\processed\\dat_pos_041.wav",
+  "window_seconds": 2.5,
+  "augmentation_seed": 879692648,
+  "variants": [
+    {
+      "file": "placement_1.wav",
+      "parameters": {
+        "offset_seconds": 0.0240625
+      }
+    },
+    {
+      "file": "placement_2.wav",
+      "parameters": {
+        "offset_seconds": 0.0125
+      }
+    },
+    {
+      "file": "placement_3.wav",
+      "parameters": {
+        "offset_seconds": 0.04775
+      }
+    },
+    {
+      "file": "quieter.wav",
+      "parameters": {
+        "offset_seconds": 0.0216875,
+        "should_apply": true,
+        "amplitude_ratio": 0.40435829710474747
+      }
+    },
+    {
+      "file": "gaussian_noise_demo.wav",
+      "parameters": {
+        "offset_seconds": 0.0335,
+        "should_apply": true,
+        "noise_std": 0.005177492741495371
+      }
+    },
+    {
+      "file": "faster.wav",
+      "parameters": {
+        "offset_seconds": 0.1976875,
+        "should_apply": true,
+        "rate": 1.0709738240072948
+      }
+    }
+  ]
+}

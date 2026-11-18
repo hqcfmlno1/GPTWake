@@ -1,0 +1,66 @@
+{
+  "source": "data\\hard_negative\\raw\\dat_hneg_013.wav",
+  "recording_id": "dat_hneg_013",
+  "category": "hard_negative",
+  "label": 0,
+  "sample_rate": 16000,
+  "speaker_id": "dat",
+  "split": "unassigned",
+  "source_group": "data\\hard_negative\\raw\\dat_hneg_013.wav",
+  "selection_method": "manual",
+  "selection_seconds": [
+    0.0,
+    1.656
+  ],
+  "source_start_frame": 0,
+  "source_end_frame": 26496,
+  "source_sample_rate": 16000,
+  "source_type": "human",
+  "processed_source": "data\\hard_negative\\processed\\dat_hneg_013.wav",
+  "window_seconds": 2.5,
+  "augmentation_seed": 1254887763,
+  "variants": [
+    {
+      "file": "placement_1.wav",
+      "parameters": {
+        "offset_seconds": 0.607625
+      }
+    },
+    {
+      "file": "placement_2.wav",
+      "parameters": {
+        "offset_seconds": 0.461375
+      }
+    },
+    {
+      "file": "placement_3.wav",
+      "parameters": {
+        "offset_seconds": 0.6309375
+      }
+    },
+    {
+      "file": "quieter.wav",
+      "parameters": {
+        "offset_seconds": 0.6530625,
+        "should_apply": true,
+        "amplitude_ratio": 0.38275506410403104
+      }
+    },
+    {
+      "file": "gaussian_noise_demo.wav",
+      "parameters": {
+        "offset_seconds": 0.6694375,
+        "should_apply": true,
+        "noise_std": 0.004092361778020859
+      }
+    },
+    {
+      "file": "faster.wav",
+      "parameters": {
+        "offset_seconds": 0.4215625,
+        "should_apply": true,
+        "rate": 1.0400116012583243
+      }
+    }
+  ]
+}
