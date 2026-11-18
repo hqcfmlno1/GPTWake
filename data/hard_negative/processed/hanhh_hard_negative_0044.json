@@ -1,0 +1,20 @@
+{
+  "source": "data/hard_negative/raw/hanhh_hard_negative_0044.wav",
+  "recording_id": "hanhh_hard_negative_0044",
+  "category": "hard_negative",
+  "label": 0,
+  "sample_rate": 16000,
+  "speaker_id": "self",
+  "split": "unassigned",
+  "source_group": "data/hard_negative/raw/hanhh_hard_negative_0044.wav",
+  "selection_method": "manual",
+  "selection_seconds": [
+    0.15,
+    1.79
+  ],
+  "source_frames": [
+    7200,
+    85920
+  ],
+  "source_sample_rate": 48000
+}

@@ -1,0 +1,14 @@
+{
+  "source": "data/positive/raw/hanhh_positive_0011.wav",
+  "recording_id": "hanhh_positive_0011",
+  "category": "positive",
+  "label": 1,
+  "sample_rate": 16000,
+  "speaker_id": "self",
+  "split": "unassigned",
+  "selection_method": "manual",
+  "selection_seconds": [
+    0.56,
+    1.53
+  ]
+}

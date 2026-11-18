@@ -1,0 +1,19 @@
+{
+  "recording_id": "hanhh_hard_negative_0019",
+  "category": "hard_negative",
+  "label": 0,
+  "speaker_id": "self",
+  "split": "unassigned",
+  "device": "MacBook Pro Microphone",
+  "raw_sample_rate": 48000,
+  "capture_rate": 48000,
+  "format": "RF64",
+  "subtype": "FLOAT",
+  "created_at": "2026-11-18T19:51:42.598426+00:00",
+  "status": "complete",
+  "frames": 131072,
+  "duration_seconds": 2.7306666666666666,
+  "overflow_count": 0,
+  "stopped_at": "2026-11-18T19:51:45.530655+00:00",
+  "error": null
+}
