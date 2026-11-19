@@ -1,0 +1,19 @@
+{
+  "source": "data\\hard_negative\\raw\\dat_hneg_011.wav",
+  "recording_id": "dat_hneg_011",
+  "category": "hard_negative",
+  "label": 0,
+  "sample_rate": 16000,
+  "speaker_id": "dat",
+  "split": "unassigned",
+  "source_group": "data\\hard_negative\\raw\\dat_hneg_011.wav",
+  "selection_method": "manual",
+  "selection_seconds": [
+    0.0,
+    1.896
+  ],
+  "source_start_frame": 0,
+  "source_end_frame": 30336,
+  "source_sample_rate": 16000,
+  "source_type": "human"
+}
