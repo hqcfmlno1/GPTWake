@@ -1,0 +1,63 @@
+{
+  "seed": 42,
+  "negative": [
+    {
+      "source": "data/negative/raw/DailyVlog 16 Độ Mixi cùng anh em Refund lần đầu trải nghiệm phong cách ẩm thực Teppanyaki độc đáo.wav",
+      "seconds": 2450.8662131519272,
+      "windows": 800
+    },
+    {
+      "source": "data/negative/raw/English_Accents_How_Different_Countries_Speak_English.wav",
+      "seconds": 906.681179138322,
+      "windows": 302
+    },
+    {
+      "source": "data/negative/raw/Street Sounds 2 Road Nosie.wav",
+      "seconds": 1629.529977324263,
+      "windows": 543
+    },
+    {
+      "source": "data/negative/raw/The Best White Noise.wav",
+      "seconds": 300.3501133786848,
+      "windows": 40
+    },
+    {
+      "source": "data/negative/raw/When a Star Falls For You Edward So x Elle Lee.wav",
+      "seconds": 832.9229931972789,
+      "windows": 278
+    },
+    {
+      "source": "data/negative/raw/iShowSpeed Explores Thailands Red Light District.wav",
+      "seconds": 1801.8684807256236,
+      "windows": 601
+    },
+    {
+      "source": "data/negative/raw/🌟IRL - Tam cô nương hội ngộ maisann306 Hanakoishi.wav",
+      "seconds": 2976.101587301587,
+      "windows": 800
+    }
+  ],
+  "augmented": {
+    "positive": {
+      "placement": 5801,
+      "context": 5801,
+      "background_noise": 5801,
+      "quieter": 5801,
+      "faster": 5801
+    },
+    "hard_negative": {
+      "placement": 3256,
+      "context": 3256,
+      "background_noise": 3256,
+      "quieter": 3256,
+      "faster": 3256
+    }
+  },
+  "skipped": [
+    {
+      "category": "positive",
+      "source": "data/positive/processed/dat_pos_070.wav",
+      "reason": "Expected mono 16 kHz audio within 2.5 s (got 2.9360 s)"
+    }
+  ]
+}
