@@ -30,3 +30,7 @@ outputs/**
 *.safetensors
 credentials*.json
 AGENTS.md
+
+# Local Superpowers plans and execution artifacts
+/.superpowers/
+/docs/superpowers/
