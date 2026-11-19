@@ -1,0 +1,19 @@
+{
+  "recording_id": "hanhh_positive_0026",
+  "category": "positive",
+  "label": 1,
+  "speaker_id": "self",
+  "split": "unassigned",
+  "device": "MacBook Pro Microphone",
+  "raw_sample_rate": 48000,
+  "capture_rate": 48000,
+  "format": "RF64",
+  "subtype": "FLOAT",
+  "created_at": "2026-11-18T20:07:58.563789+00:00",
+  "status": "complete",
+  "frames": 102400,
+  "duration_seconds": 2.1333333333333333,
+  "overflow_count": 0,
+  "stopped_at": "2026-11-18T20:08:00.904626+00:00",
+  "error": null
+}
