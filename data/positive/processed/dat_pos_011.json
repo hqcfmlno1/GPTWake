@@ -1,0 +1,14 @@
+{
+  "source": "data\\positive\\raw\\dat_pos_011.wav",
+  "recording_id": "dat_pos_011",
+  "category": "positive",
+  "label": 1,
+  "sample_rate": 16000,
+  "speaker_id": "dat",
+  "split": "unassigned",
+  "selection_method": "manual",
+  "selection_seconds": [
+    0.0,
+    2.472
+  ]
+}
