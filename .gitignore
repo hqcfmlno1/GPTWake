@@ -34,3 +34,6 @@ AGENTS.md
 # Local Superpowers plans and execution artifacts
 /.superpowers/
 /docs/superpowers/
+
+# Noise recordings stay local
+/data/noise/
