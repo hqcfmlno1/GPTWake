@@ -1,0 +1,5 @@
+/data/positive/synthetic/**/*.wav filter=lfs diff=lfs merge=lfs -text
+/data/positive/augmented/**/*.wav filter=lfs diff=lfs merge=lfs -text
+/data/hard_negative/processed/tts-v1_*.wav filter=lfs diff=lfs merge=lfs -text
+/data/hard_negative/augmented/**/*.wav filter=lfs diff=lfs merge=lfs -text
+/data/negative/**/*.wav filter=lfs diff=lfs merge=lfs -text
