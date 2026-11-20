@@ -20,6 +20,8 @@ data/**
 !data/**/README.md
 !data/positive/processed/*.wav
 !data/hard_negative/processed/*.wav
+!data/holdout/positive/*.wav
+!data/holdout/negative/*.wav
 checkpoints/**
 !checkpoints/.gitkeep
 outputs/**
