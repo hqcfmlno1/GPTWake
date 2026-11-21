@@ -1,20 +1,29 @@
 """Create one reproducible GPTWake training split."""
 
 import argparse
+import csv
 import filecmp
 import json
 import os
-import random
+from collections import defaultdict
 from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from create_holdout import SEED, SPEAKERS, read_batch, select_holdout
-from create_validation import select_validation
-
+SEED = 42
 POSITIVE_COUNT = 25_000
 NEGATIVE_COUNT = 21_400
 PRESETS = {"1": 0, "2": 25, "3": 50, "4": 70}
+EVALUATION_COUNTS = {"holdout": (300, 200, 200), "validation": (100, 50, 50)}
+
+
+def read_batch(folder):
+    with (folder / "manifest.csv").open(encoding="utf-8", newline="") as stream:
+        for row in csv.DictReader(stream):
+            name = row["output"]
+            if Path(name).name != name or Path(name).suffix.lower() != ".wav":
+                raise ValueError(f"Invalid WAV filename in {folder / 'manifest.csv'}: {name}")
+            yield row, folder / name
 
 
 def ordinary_windows(data):
@@ -36,19 +45,52 @@ def negative_parent(data, row, path):
     return parent.removeprefix("data/") if parent else path.relative_to(data).as_posix()
 
 
-def evaluation_paths(data, split, outputs):
-    destination = data / split
-    expected = {
-        destination / label / name: source
-        for label, files in outputs.items()
-        for name, source in files.items()
-    }
-    if destination.exists() and (
-        {path for path in destination.glob("*/*.wav")} != expected.keys()
-        or any(not filecmp.cmp(path, source, shallow=False) for path, source in expected.items())
-    ):
-        raise ValueError(f"{destination} differs from the fixed evaluation selection.")
-    return set(expected.values())
+def evaluation_index(batches):
+    index = {category: defaultdict(list) for category in batches}
+    for category, rows in batches.items():
+        for row, path in rows:
+            if category == "ordinary_negative":
+                # The published ordinary negatives came from these two original batches.
+                if row.get("batch") not in (
+                    "batch_v2",
+                    "placement_v1",
+                ) and path.parent.name not in (
+                    "batch_v2",
+                    "placement_v1",
+                ):
+                    continue
+            name = row.get("original_output") or path.name
+            index[category][name].append((row, path))
+    return index
+
+
+def evaluation_rows(data, split, index):
+    selected = {category: [] for category in index}
+    for category, count in zip(index, EVALUATION_COUNTS[split], strict=True):
+        label = "positive" if category == "positive" else "negative"
+        published = sorted((data / split / label).glob(f"{category}_*.wav"))
+        if len(published) != count:
+            raise ValueError(f"Expected {count} {category} WAVs in {split}.")
+        for file in published:
+            # Evaluation filenames prepend the label and group to the original output name.
+            parts = file.name.removeprefix(f"{category}_").split("_")
+            candidates = [
+                entry
+                for pos in range(1, len(parts))
+                for entry in index[category].get("_".join(parts[pos:]), ())
+            ]
+            check_wav(file)
+            matches = [
+                (row, path) for row, path in candidates if filecmp.cmp(file, path, shallow=False)
+            ]
+            if len(matches) != 1:
+                raise ValueError(
+                    f"Could not match {file} to one source WAV. Check the LFS checkout."
+                )
+            selected[category].append(matches[0])
+        if len({path for _, path in selected[category]}) != count:
+            raise ValueError(f"Duplicate source WAVs in {split} {category}.")
+    return selected
 
 
 def rank_samples(data, paths, category):
@@ -60,33 +102,45 @@ def rank_samples(data, paths, category):
 
 
 def training_pools(data):
-    holdout = evaluation_paths(data, "holdout", select_holdout(data, random.Random(SEED)))
-    validation = evaluation_paths(data, "validation", select_validation(data))
-    ordinary = list(ordinary_windows(data))
-    held_recordings = {row["source"] for row, path in ordinary if path in holdout}
-    valid_recordings = {row["source"] for row, path in ordinary if path in validation}
+    batches = {
+        "positive": list(read_batch(data / "positive/augmented/batch_v1")),
+        "ordinary_negative": list(ordinary_windows(data)),
+        "hard_negative": list(read_batch(data / "hard_negative/augmented/batch_v1")),
+    }
+    index = evaluation_index(batches)
+    holdout = evaluation_rows(data, "holdout", index)
+    validation = evaluation_rows(data, "validation", index)
+    held_recordings = {row["source"] for row, _ in holdout["ordinary_negative"]}
+    valid_recordings = {row["source"] for row, _ in validation["ordinary_negative"]}
     evaluation_recordings = held_recordings | valid_recordings
     valid_parents = {
-        negative_parent(data, row, path) for row, path in ordinary if path in validation
+        negative_parent(data, row, path) for row, path in validation["ordinary_negative"]
     }
     if (len(held_recordings), len(valid_parents)) != (3, 50):
         raise ValueError("Could not match the fixed evaluation negatives to their source windows.")
     pools = {
         "ordinary_negative": [
             path
-            for row, path in ordinary
+            for row, path in batches["ordinary_negative"]
             if row["source"] not in held_recordings
             and negative_parent(data, row, path) not in valid_parents
         ]
     }
+    held_speakers = {
+        Path(row["source"]).name.partition("_")[0].casefold()
+        for category in ("positive", "hard_negative")
+        for row, _ in holdout[category]
+        if row["source_type"] == "human"
+    }
     for category in ("positive", "hard_negative"):
-        rows = list(read_batch(data / category / "augmented/batch_v1"))
-        held_sources = {row["source"] for row, path in rows if path in holdout | validation}
+        held_sources = {row["source"] for row, _ in holdout[category] + validation[category]}
         eligible = []
-        for row, path in rows:
+        for row, path in batches[category]:
             source = row["source"]
             speaker = Path(source).name.partition("_")[0].casefold()
-            if source in held_sources or (row["source_type"] == "human" and speaker in SPEAKERS):
+            if source in held_sources or (
+                row["source_type"] == "human" and speaker in held_speakers
+            ):
                 continue
             if any(
                 clip["source"] in evaluation_recordings
