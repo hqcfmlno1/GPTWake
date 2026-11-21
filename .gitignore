@@ -22,6 +22,8 @@ data/**
 !data/hard_negative/processed/*.wav
 !data/holdout/positive/*.wav
 !data/holdout/negative/*.wav
+!data/validation/positive/*.wav
+!data/validation/negative/*.wav
 checkpoints/**
 !checkpoints/.gitkeep
 outputs/**
