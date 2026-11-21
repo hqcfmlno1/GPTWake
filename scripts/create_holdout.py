@@ -41,6 +41,15 @@ def read_batch(folder):
             yield row, folder / name
 
 
+def read_ordinary_eval_windows(data):
+    for stage, batch in (("processed", "batch_v2"), ("augmented", "placement_v1")):
+        folder = data / "negative" / stage
+        if (folder / "manifest.csv").is_file():
+            yield from (entry for entry in read_batch(folder) if entry[0]["batch"] == batch)
+        else:
+            yield from read_batch(folder / batch)
+
+
 def sample_windows(groups, count, rng, description):
     if len(groups) < count:
         raise ValueError(f"{description} requires {count} distinct inputs, found {len(groups)}.")
@@ -76,10 +85,8 @@ def select_holdout(data, rng):
         if category == "hard_negative":
             hard_speakers = by_speaker
 
-    negatives = [
-        *read_batch(data / "negative/processed/batch_v2"),
-        *read_batch(data / "negative/augmented/placement_v1"),
-    ]
+    negatives = list(read_ordinary_eval_windows(data))
+    original_names = {path: row.get("original_output") or path.name for row, path in negatives}
     ordinary_groups = {}
     for prefix, source_prefix, count in NEGATIVE_SOURCES:
         sources = {
@@ -99,14 +106,14 @@ def select_holdout(data, rng):
                 groups[parent].append(path)
         ordinary_groups[prefix] = groups
         for path in sample_windows(groups, count, rng, source):
-            outputs["negative"][f"ordinary_negative_{prefix}_{path.name}"] = path
+            outputs["negative"][f"ordinary_negative_{prefix}_{original_names[path]}"] = path
 
     # Draw the expansion after the original selection so existing WAVs remain identical.
     selected = set(outputs["negative"].values())
     for prefix, _, count in NEGATIVE_SOURCES:
         groups = remaining_groups(ordinary_groups[prefix], selected)
         for path in sample_windows(groups, count, rng, prefix):
-            outputs["negative"][f"ordinary_negative_{prefix}_{path.name}"] = path
+            outputs["negative"][f"ordinary_negative_{prefix}_{original_names[path]}"] = path
     for speaker, count in EXTRA_HARD_HUMAN.items():
         groups = remaining_groups(hard_speakers[speaker], selected)
         for path in sample_windows(groups, count, rng, speaker):

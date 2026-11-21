@@ -6,7 +6,14 @@ import wave
 from collections import defaultdict
 from pathlib import Path
 
-from create_holdout import SEED, read_batch, sample_windows, select_holdout, write_holdout
+from create_holdout import (
+    SEED,
+    read_batch,
+    read_ordinary_eval_windows,
+    sample_windows,
+    select_holdout,
+    write_holdout,
+)
 
 PHRASE_QUOTAS = {
     "positive": {"duong": 25, "hanhh": 25, "tts_us": 17, "tts_gb": 16, "tts_vn": 17},
@@ -50,8 +57,8 @@ def select_validation(data):
             for path in sample_windows(groups[group], count, rng, f"{category} {group}"):
                 target[f"{category}_{group}_{path.name}"] = path
 
-    batches = ("negative/processed/batch_v2", "negative/augmented/placement_v1")
-    ordinary = [entry for batch in batches for entry in read_batch(data / batch)]
+    ordinary = list(read_ordinary_eval_windows(data))
+    original_names = {path: row.get("original_output") or path.name for row, path in ordinary}
     held_sources = {row["source"] for row, path in ordinary if path in holdout_paths}
     for group, (suffix, count) in ORDINARY_QUOTAS.items():
         matches = [
@@ -65,7 +72,7 @@ def select_validation(data):
             parent = Path(row.get("source_processed") or path).name
             parents[parent].append(path)
         for path in sample_windows(parents, count, rng, group):
-            outputs["negative"][f"ordinary_negative_{group}_{path.name}"] = path
+            outputs["negative"][f"ordinary_negative_{group}_{original_names[path]}"] = path
 
     if {label: len(files) for label, files in outputs.items()} != {
         "positive": 100,
